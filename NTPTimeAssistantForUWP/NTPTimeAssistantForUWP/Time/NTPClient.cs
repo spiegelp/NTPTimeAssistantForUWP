@@ -10,6 +10,9 @@ using Windows.Networking.Sockets;
 
 namespace NTPTimeAssistantForUWP.Time
 {
+    /// <summary>
+    /// Client class to send a request to a NTP Server and returning the response as a DateTimeOffset in UTC.
+    /// </summary>
     public class NTPClient : IDisposable
     {
         private const string DefaultNtpServer = "pool.ntp.org";
@@ -27,11 +30,22 @@ namespace NTPTimeAssistantForUWP.Time
             m_callback = null;
         }
 
+        /// <summary>
+        /// Requests the default NTP server (pool.ntp.org) and returns the UTC timestamp of the response as a DateTimeOffset instance by calling the TimeResponseCallback.
+        /// </summary>
+        /// <param name="callback"></param>
+        /// <returns></returns>
         public async Task RequestTimeAsync(TimeResponseCallback callback)
         {
             await RequestTimeAsync(DefaultNtpServer, callback);
         }
 
+        /// <summary>
+        /// Requests the provided NTP server and returns the UTC timestamp of the response as a DateTimeOffset instance by calling the TimeResponseCallback.
+        /// </summary>
+        /// <param name="ntpServer"></param>
+        /// <param name="callback"></param>
+        /// <returns></returns>
         public async Task RequestTimeAsync(string ntpServer, TimeResponseCallback callback)
         {
             if (string.IsNullOrWhiteSpace(ntpServer))
@@ -68,7 +82,7 @@ namespace NTPTimeAssistantForUWP.Time
             }
         }
 
-        public void MessageReceived(DatagramSocket socket, DatagramSocketMessageReceivedEventArgs args)
+        private void MessageReceived(DatagramSocket socket, DatagramSocketMessageReceivedEventArgs args)
         {
             try
             {

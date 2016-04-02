@@ -108,7 +108,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Time\ClockSynchronizedEventArgs.cs" />
+    <Compile Include="Time\TimeSynchronizedEventArgs.cs" />
     <Compile Include="Time\NTPClient.cs" />
     <Compile Include="Time\TimeAssistant.cs" />
     <Compile Include="Time\TimeoutException.cs" />

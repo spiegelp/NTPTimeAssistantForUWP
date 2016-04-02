@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace NTPTimeAssistantForUWP.Time
 {
-    public class ClockSynchronizedEventArgs : EventArgs
+    public class TimeSynchronizedEventArgs : EventArgs
     {
         private DateTimeOffset m_synchronizedTimeUtc;
 
@@ -19,12 +19,12 @@ namespace NTPTimeAssistantForUWP.Time
             }
         }
 
-        public ClockSynchronizedEventArgs(DateTimeOffset synchronizedTimeUtc)
+        public TimeSynchronizedEventArgs(DateTimeOffset synchronizedTimeUtc)
             : base()
         {
             m_synchronizedTimeUtc = synchronizedTimeUtc;
         }
     }
 
-    public delegate void ClockSynchronizedEventHandler(object sender, ClockSynchronizedEventArgs args);
+    public delegate void TimeSynchronizedEventHandler(object sender, TimeSynchronizedEventArgs args);
 }

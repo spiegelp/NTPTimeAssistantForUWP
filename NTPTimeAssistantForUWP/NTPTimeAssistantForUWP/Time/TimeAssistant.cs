@@ -6,6 +6,10 @@ using System.Threading.Tasks;
 
 namespace NTPTimeAssistantForUWP.Time
 {
+    /// <summary>
+    /// Controller to manage NTP requesst and to create DateTime and DateTimeOffset instances based on the response.
+    /// A call to SynchronizeClockAsync() is needed to initialize the TimeAssistant, which caches the offset between the hardware time and the NTP time.
+    /// </summary>
     public class TimeAssistant
     {
         private static object m_staticLockObject = new object();
@@ -16,12 +20,15 @@ namespace NTPTimeAssistantForUWP.Time
 
         private static TimeAssistant m_instance;
 
-        public event ClockSynchronizedEventHandler ClockSynchronized;
+        public event TimeSynchronizedEventHandler TimeSynchronized;
 
         private TimeSpan m_offset;
         private bool m_isSynchronizing;
         private NTPClient m_ntpClient;
 
+        /// <summary>
+        /// Singleton factory for the TimeAssistant.
+        /// </summary>
         public static TimeAssistant Instance
         {
             get
@@ -38,6 +45,9 @@ namespace NTPTimeAssistantForUWP.Time
             }
         }
 
+        /// <summary>
+        /// The current time.
+        /// </summary>
         public DateTime DateTime
         {
             get
@@ -49,6 +59,9 @@ namespace NTPTimeAssistantForUWP.Time
             }
         }
 
+        /// <summary>
+        /// The current time with UTC as the time zone.
+        /// </summary>
         public DateTime DateTimeUtc
         {
             get
@@ -60,6 +73,9 @@ namespace NTPTimeAssistantForUWP.Time
             }
         }
 
+        /// <summary>
+        /// The current time.
+        /// </summary>
         public DateTimeOffset DateTimeOffset
         {
             get
@@ -71,6 +87,9 @@ namespace NTPTimeAssistantForUWP.Time
             }
         }
 
+        /// <summary>
+        /// The current time with UTC as the time zone.
+        /// </summary>
         public DateTimeOffset DateTimeOffsetUtc
         {
             get
@@ -82,6 +101,9 @@ namespace NTPTimeAssistantForUWP.Time
             }
         }
 
+        /// <summary>
+        /// True, if the TimeAssistant is synchronizing it's time with a NTP server.
+        /// </summary>
         public bool IsSynchronizing
         {
             get
@@ -105,27 +127,55 @@ namespace NTPTimeAssistantForUWP.Time
             m_ntpClient = null;
         }
 
-        public async Task<DateTimeOffset?> SynchronizeClockAsync()
+        /// <summary>
+        /// Synchronizes the time with the default NTP server (pool.ntp.org) and quits the process if it is not finished after 5000 milliseconds.
+        /// A DateTimeOffset instance in UTC of the current timestamp will be return after a successful request.
+        /// Calls during a synchronization process will return null.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<DateTimeOffset?> SynchronizeTimeAsync()
         {
-            return await DoSynchronizeClockAsync(null, RequestTimeout);
+            return await DoSynchronizeTimeAsync(null, RequestTimeout);
         }
 
-        public async Task<DateTimeOffset?> SynchronizeClockAsync(string ntpServer)
+        /// <summary>
+        /// Synchronizes the time with the provided NTP server and quits the process if it is not finished after 5000 milliseconds.
+        /// A DateTimeOffset instance in UTC of the current timestamp will be return after a successful request.
+        /// Calls during a synchronization process will return null.
+        /// </summary>
+        /// <param name="ntpServer"></param>
+        /// <returns></returns>
+        public async Task<DateTimeOffset?> SynchronizeTimeAsync(string ntpServer)
         {
-            return await DoSynchronizeClockAsync(ntpServer, RequestTimeout);
+            return await DoSynchronizeTimeAsync(ntpServer, RequestTimeout);
         }
 
-        public async Task<DateTimeOffset?> SynchronizeClockAsync(int requestTimeout)
+        /// <summary>
+        /// Synchronizes the time with the default NTP server (pool.ntp.org) and quits the process if it is not finished after requestTimeout milliseconds.
+        /// A DateTimeOffset instance in UTC of the current timestamp will be return after a successful request.
+        /// Calls during a synchronization process will return null.
+        /// </summary>
+        /// <param name="requestTimeout"></param>
+        /// <returns></returns>
+        public async Task<DateTimeOffset?> SynchronizeTimeAsync(int requestTimeout)
         {
-            return await DoSynchronizeClockAsync(null, requestTimeout);
+            return await DoSynchronizeTimeAsync(null, requestTimeout);
         }
 
-        public async Task<DateTimeOffset?> SynchronizeClockAsync(string ntpServer, int requestTimeout)
+        /// <summary>
+        /// Synchronizes the time with the provided NTP server and quits the process if it is not finished after requestTimeout milliseconds.
+        /// A DateTimeOffset instance in UTC of the current timestamp will be return after a successful request.
+        /// Calls during a synchronization process will return null.
+        /// </summary>
+        /// <param name="ntpServer"></param>
+        /// <param name="requestTimeout"></param>
+        /// <returns></returns>
+        public async Task<DateTimeOffset?> SynchronizeTimeAsync(string ntpServer, int requestTimeout)
         {
-            return await DoSynchronizeClockAsync(ntpServer, requestTimeout);
+            return await DoSynchronizeTimeAsync(ntpServer, requestTimeout);
         }
 
-        private async Task<DateTimeOffset?> DoSynchronizeClockAsync(string ntpServer, int requestTimeout)
+        private async Task<DateTimeOffset?> DoSynchronizeTimeAsync(string ntpServer, int requestTimeout)
         {
             bool doSynchronize = false;
 
@@ -147,9 +197,11 @@ namespace NTPTimeAssistantForUWP.Time
                         requestTimeout = RequestTimeout;
                     }
 
+                    // send the request
                     m_ntpClient = new NTPClient();
                     await m_ntpClient.RequestTimeAsync(ntpServer, TimeResponseCallback);
 
+                    // wait for requestTimeout milliseconds for a response
                     int numberOfWaitingCycles = RequestTimeout / WaitingCycleDuration;
                     int waitingCycle = 0;
 
@@ -161,6 +213,8 @@ namespace NTPTimeAssistantForUWP.Time
 
                     if (!IsSynchronizing)
                     {
+                        // the client got a response and called the TimeResponseCallback
+                        //     -> return a DateTimeOffset instance in UTC of the current timestamp
                         return DateTimeOffsetUtc;
                     }
                     else
@@ -175,6 +229,8 @@ namespace NTPTimeAssistantForUWP.Time
                 finally
                 {
                     DisposeNTPClient();
+
+                    // stop the synchronizing process
                     IsSynchronizing = false;
                 }
             }
@@ -188,11 +244,14 @@ namespace NTPTimeAssistantForUWP.Time
         {
             lock (m_lockObject)
             {
+                // remember the offset between the hardware time and the NTP time
                 m_offset = time - DateTimeOffset.UtcNow;
+
+                // stop the synchronizing process
                 IsSynchronizing = false;
             }
 
-            OnClockSynchronized(DateTimeOffsetUtc);
+            OnTimeSynchronized(DateTimeOffsetUtc);
         }
 
         private void DisposeNTPClient()
@@ -206,11 +265,11 @@ namespace NTPTimeAssistantForUWP.Time
             }
         }
 
-        private void OnClockSynchronized(DateTimeOffset synchronizedTimeUtc)
+        private void OnTimeSynchronized(DateTimeOffset synchronizedTimeUtc)
         {
-            if (ClockSynchronized != null)
+            if (TimeSynchronized != null)
             {
-                ClockSynchronized(this, new ClockSynchronizedEventArgs(synchronizedTimeUtc));
+                TimeSynchronized(this, new TimeSynchronizedEventArgs(synchronizedTimeUtc));
             }
         }
     }
