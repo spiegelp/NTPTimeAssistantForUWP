@@ -1,0 +1,12 @@
+The library addresses Windows 10 IoT platforms without a real time clock. It requests a NTP server and provides DateTime and DateTimeOffset instances based on the response. Any contribution for improvements will be welcomed.
+
+
+The "master" branch is considered as a stable version representing the most recent release. All developments will be done
+on the "development" branch or a dedicated feature branch.
+
+
+Please follow these guidelines for contributing:
+
+1. Please write a short message to avoid conflicts by implementing the same features or fixing the same issues.
+2. Fork the repository and commit your changes on a dedicated feature branch.
+3. Create a pull request to the "development" branch of the original repository.
