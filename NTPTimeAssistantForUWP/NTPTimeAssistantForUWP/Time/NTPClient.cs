@@ -23,11 +23,13 @@ namespace NTPTimeAssistantForUWP.Time
 
         private DatagramSocket m_datagramSocket;
         private TimeResponseCallback m_callback;
+        private DateTime m_requestStartTime;
 
         public NTPClient()
         {
             m_datagramSocket = null;
             m_callback = null;
+            m_requestStartTime = DateTime.Now;
         }
 
         /// <summary>
@@ -68,6 +70,8 @@ namespace NTPTimeAssistantForUWP.Time
 
                 await m_datagramSocket.ConnectAsync(hostname, NtpPort.ToString());
 
+                m_requestStartTime = DateTime.Now;
+
                 using (Stream stream = m_datagramSocket.OutputStream.AsStreamForWrite(NtpDataLength))
                 {
                     stream.Write(ntpData, 0, NtpDataLength);
@@ -99,11 +103,22 @@ namespace NTPTimeAssistantForUWP.Time
                         i++;
                     }
 
+                    DateTime responseEndTime = DateTime.Now;
+                    TimeSpan requestDuration = responseEndTime - m_requestStartTime;
+
                     ulong intPart = (ulong)ntpData[40] << 24 | (ulong)ntpData[41] << 16 | (ulong)ntpData[42] << 8 | (ulong)ntpData[43];
                     ulong fractPart = (ulong)ntpData[44] << 24 | (ulong)ntpData[45] << 16 | (ulong)ntpData[46] << 8 | (ulong)ntpData[47];
 
                     ulong milliseconds = (intPart * 1000) + ((fractPart * 1000) / 0x100000000L);
                     DateTimeOffset ntpTime = new DateTimeOffset(1900, 1, 1, 0, 0, 0, 0, TimeSpan.Zero).AddMilliseconds(milliseconds);
+
+                    // according to http://www.ntp.org/ntpfaq/NTP-s-algo.htm section 5.1.2.1.
+                    //     - the timestamp in the response is the time of the NTP server when it sends the response
+                    //     - the delay for transmitting the request as well as the response should be considered as equal
+                    // 
+                    //     -> add the half of the duration between transmitting the request and receiving the response
+                    TimeSpan halfRequestDuration = new TimeSpan(requestDuration.Ticks / 2);
+                    ntpTime = ntpTime + halfRequestDuration;
 
                     if (m_callback != null)
                     {
