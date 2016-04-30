@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace NTPTimeAssistantForUWP.Time
 {
     /// <summary>
-    /// Controller to manage NTP requesst and to create DateTime and DateTimeOffset instances based on the response.
+    /// Controller to manage NTP requests and to create DateTime and DateTimeOffset instances based on the response.
     /// A call to SynchronizeClockAsync() is needed to initialize the TimeAssistant, which caches the offset between the hardware time and the NTP time.
     /// </summary>
     public class TimeAssistant
@@ -132,10 +132,21 @@ namespace NTPTimeAssistantForUWP.Time
         /// A DateTimeOffset instance in UTC of the current timestamp will be return after a successful request.
         /// Calls during a synchronization process will return null.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>the currrent time or throws an exception on timeout</returns>
         public async Task<DateTimeOffset?> SynchronizeTimeAsync()
         {
-            return await DoSynchronizeTimeAsync(null, RequestTimeout);
+            return await SynchronizeTimeAsync(true);
+        }
+
+        /// <summary>
+        /// Synchronizes the time with the default NTP server (pool.ntp.org) and quits the process if it is not finished after 5000 milliseconds.
+        /// A DateTimeOffset instance in UTC of the current timestamp will be return after a successful request.
+        /// Calls during a synchronization process will return null.
+        /// </summary>
+        /// <returns>the currrent time or on timeout optionally null or an exception</returns>
+        public async Task<DateTimeOffset?> SynchronizeTimeAsync(bool throwExceptionOnTimeout)
+        {
+            return await DoSynchronizeTimeAsync(null, RequestTimeout, throwExceptionOnTimeout);
         }
 
         /// <summary>
@@ -144,10 +155,22 @@ namespace NTPTimeAssistantForUWP.Time
         /// Calls during a synchronization process will return null.
         /// </summary>
         /// <param name="ntpServer"></param>
-        /// <returns></returns>
+        /// <returns>the currrent time or throws an exception on timeout</returns>
         public async Task<DateTimeOffset?> SynchronizeTimeAsync(string ntpServer)
         {
-            return await DoSynchronizeTimeAsync(ntpServer, RequestTimeout);
+            return await SynchronizeTimeAsync(ntpServer, true);
+        }
+
+        /// <summary>
+        /// Synchronizes the time with the provided NTP server and quits the process if it is not finished after 5000 milliseconds.
+        /// A DateTimeOffset instance in UTC of the current timestamp will be return after a successful request.
+        /// Calls during a synchronization process will return null.
+        /// </summary>
+        /// <param name="ntpServer"></param>
+        /// <returns>the currrent time or on timeout optionally null or an exception</returns>
+        public async Task<DateTimeOffset?> SynchronizeTimeAsync(string ntpServer, bool throwExceptionOnTimeout)
+        {
+            return await DoSynchronizeTimeAsync(ntpServer, RequestTimeout, throwExceptionOnTimeout);
         }
 
         /// <summary>
@@ -156,10 +179,22 @@ namespace NTPTimeAssistantForUWP.Time
         /// Calls during a synchronization process will return null.
         /// </summary>
         /// <param name="requestTimeout"></param>
-        /// <returns></returns>
+        /// <returns>the currrent time or throws an exception on timeout</returns>
         public async Task<DateTimeOffset?> SynchronizeTimeAsync(int requestTimeout)
         {
-            return await DoSynchronizeTimeAsync(null, requestTimeout);
+            return await SynchronizeTimeAsync(requestTimeout, true);
+        }
+
+        /// <summary>
+        /// Synchronizes the time with the default NTP server (pool.ntp.org) and quits the process if it is not finished after requestTimeout milliseconds.
+        /// A DateTimeOffset instance in UTC of the current timestamp will be return after a successful request.
+        /// Calls during a synchronization process will return null.
+        /// </summary>
+        /// <param name="requestTimeout"></param>
+        /// <returns>the currrent time or on timeout optionally null or an exception</returns>
+        public async Task<DateTimeOffset?> SynchronizeTimeAsync(int requestTimeout, bool throwExceptionOnTimeout)
+        {
+            return await DoSynchronizeTimeAsync(null, requestTimeout, throwExceptionOnTimeout);
         }
 
         /// <summary>
@@ -169,13 +204,26 @@ namespace NTPTimeAssistantForUWP.Time
         /// </summary>
         /// <param name="ntpServer"></param>
         /// <param name="requestTimeout"></param>
-        /// <returns></returns>
+        /// <returns>the currrent time or throws an exception on timeout</returns>
         public async Task<DateTimeOffset?> SynchronizeTimeAsync(string ntpServer, int requestTimeout)
         {
-            return await DoSynchronizeTimeAsync(ntpServer, requestTimeout);
+            return await SynchronizeTimeAsync(ntpServer, requestTimeout, true);
         }
 
-        private async Task<DateTimeOffset?> DoSynchronizeTimeAsync(string ntpServer, int requestTimeout)
+        /// <summary>
+        /// Synchronizes the time with the provided NTP server and quits the process if it is not finished after requestTimeout milliseconds.
+        /// A DateTimeOffset instance in UTC of the current timestamp will be return after a successful request.
+        /// Calls during a synchronization process will return null.
+        /// </summary>
+        /// <param name="ntpServer"></param>
+        /// <param name="requestTimeout"></param>
+        /// <returns>the currrent time or on timeout optionally null or an exception</returns>
+        public async Task<DateTimeOffset?> SynchronizeTimeAsync(string ntpServer, int requestTimeout, bool throwExceptionOnTimeout)
+        {
+            return await DoSynchronizeTimeAsync(ntpServer, requestTimeout, throwExceptionOnTimeout);
+        }
+
+        private async Task<DateTimeOffset?> DoSynchronizeTimeAsync(string ntpServer, int requestTimeout, bool throwExceptionOnTimeout)
         {
             bool doSynchronize = false;
 
@@ -219,7 +267,14 @@ namespace NTPTimeAssistantForUWP.Time
                     }
                     else
                     {
-                        throw new TimeoutException();
+                        if (throwExceptionOnTimeout)
+                        {
+                            throw new TimeoutException();
+                        }
+                        else
+                        {
+                            return null;
+                        }
                     }
                 }
                 catch (Exception)
